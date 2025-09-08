@@ -91,3 +91,28 @@ export const logout = (req, res) => {
     }
 
 }
+
+export const sendVerifyOtp = async (req, res) => {
+    try {
+        const {userId} = req.body;
+        const user = await userModel.findById(userId);
+        if (user.isVerified) {
+            return res.status(400).json({ error: 'User already verified', success: false });
+        }
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        user.verifyOtp = otp;
+        user.verifyOtpExpiresAt = Date.now() + 30 * 60 * 1000; // 30 minutes from now
+        await user.save();
+        // sending otp email
+        const mailOptions = {
+            from: process.env.SENDER_EMAIL,
+            to: user.email,
+            subject: 'Account Verification OTP',
+            text: `Hello ${user.name},\n\nYour OTP code is ${otp}. It is valid for 30 minutes.\n\nBest regards,\nThe Team`
+        };
+        await transporter.sendMail(mailOptions);
+        res.status(200).json({ message: 'OTP sent to email', success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Internal Server Error', success: false });
+    }
+};
