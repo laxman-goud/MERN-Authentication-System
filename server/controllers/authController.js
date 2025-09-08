@@ -116,3 +116,29 @@ export const sendVerifyOtp = async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error', success: false });
     }
 };
+
+export const verifyEmail= async (req, res) => {
+    try {
+        const {userId, otp} = req.body;
+        if(!userId || !otp) {
+            return res.status(400).json({ error: 'User ID and OTP are required', success: false });
+        }
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found', success: false });
+        }
+        if(user.verifyOtp !== otp || user.verifyOtp === '') {
+            return res.status(400).json({ error: 'Invalid OTP', success: false });
+        }
+        if(user.verifyOtpExpiresAt < Date.now()) {
+            return res.status(400).json({ error: 'OTP has expired', success: false });
+        }
+        user.isVerified = true;
+        user.verifyOtp = '';
+        user.verifyOtpExpiresAt = 0;
+        await user.save();
+        res.status(200).json({ message: 'Account verified successfully', success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Internal Server Error', success: false });
+    }
+};
