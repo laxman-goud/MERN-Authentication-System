@@ -182,3 +182,30 @@ export const sendResetOtp = async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error', success: false });
     }
 };
+
+export const resetPassword = async (req, res) => {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) {
+        return res.status(400).json({ error: 'Email, OTP and new password are required', success: false });
+    }
+    try {
+        const user = await userModel.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found', success: false });
+        }
+        if(user.resetOtp !== otp || user.resetOtp === '') {
+            return res.status(400).json({ error: 'Invalid OTP', success: false });
+        }
+        if(user.resetOtpExpiresAt < Date.now()) {
+            return res.status(400).json({ error: 'OTP has expired', success: false });
+        }
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        user.password = hashedPassword;
+        user.resetOtp = '';
+        user.resetOtpExpiresAt = 0;
+        await user.save();
+        res.status(200).json({ message: 'Password reset successfully', success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Internal Server Error', success: false });
+    }
+};
