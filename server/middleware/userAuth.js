@@ -1,4 +1,4 @@
-import { JsonWebTokenError } from "jsonwebtoken";
+import jwt from 'jsonwebtoken';
 
 const userAuth = (req, res, next) => {
     const {token} = req.cookies;
