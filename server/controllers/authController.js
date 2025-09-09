@@ -154,3 +154,31 @@ export const isAuthenticated = (req, res) => {
         res.status(500).json({ error: 'Internal Server Error', success: false });
     }
 };
+
+export const sendResetOtp = async (req, res) => {
+    const { email } = req.body;
+    if(!email) {
+        return res.status(400).json({ error: 'Email is required', success: false });
+    }
+    try {
+        const user = await userModel.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found', success: false });
+        }
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        user.resetOtp = otp;
+        user.resetOtpExpiresAt = Date.now() + 30 * 60 * 1000; // 30 minutes from now
+        await user.save();
+        // sending otp email
+        const mailOptions = {
+            from: process.env.SENDER_EMAIL,
+            to: user.email,
+            subject: 'Password Reset OTP',
+            text: `Hello ${user.name},\n\nYour password reset OTP code is ${otp}. It is valid for 30 minutes.\n\nBest regards,\nThe Team`
+        };
+        await transporter.sendMail(mailOptions);
+        res.status(200).json({ message: 'Password reset OTP sent to email', success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Internal Server Error', success: false });
+    }
+};
