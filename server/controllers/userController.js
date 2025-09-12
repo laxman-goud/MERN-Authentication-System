@@ -2,21 +2,13 @@ import userModel from "../models/User.js";
 
 export const getUserData = async (req, res) => {
     try {
-        const { userId } = req.body;
-        const user = await userModel.findById(userId);
+        const user = await userModel.findById(req.userId).select("-password");
         if (!user) {
-            return res.status(401).json({ error: 'User Not Found', success: false });
+            return res.status(404).json({ success: false, error: "User not found" });
         }
-        res.status(200).json(
-            {
-                success: true,
-                userData: {
-                    name: user.name,
-                    isVerified: user.isVerified,
-                }
-            }
-        );
+        res.json({ success: true, userData: user });
     } catch (error) {
-        res.status(500).json({ error: 'Internal Server Error', success: false });
+        console.error("Error in getUserData:", error);
+        res.status(500).json({ success: false, error: "Internal Server Error" });
     }
-}
+};
