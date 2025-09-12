@@ -12,39 +12,31 @@ export const register = async (req, res) => {
     try {
         const existingUser = await userModel.findOne({ email });
         if (existingUser) {
-            return res.status(409).json({ error: 'Email already in use' });
+            return res.status(409).json({ error: 'Email already in use', success: false });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = new userModel({
-            name,
-            email,
-            password: hashedPassword,
-        });
+        const newUser = new userModel({ name, email, password: hashedPassword });
         await newUser.save();
 
         const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-        res.cookie('token', token,
-            {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-            });
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
 
-        // sending welcome email
-        const mailOptions = {
+        await transporter.sendMail({
             from: process.env.SENDER_EMAIL,
             to: email,
             subject: 'Welcome to Our Service',
             text: `Hello ${name},\n\nThank you for registering at our service!\n\nBest regards,\nThe Team`
-        };
-        await transporter.sendMail(mailOptions);
+        });
 
         res.status(201).json({ message: 'User registered successfully', success: true });
-    }
-    catch (error) {
-        res.status(500).json({ error: 'Internal Server Error' });
+    } catch (error) {
+        res.status(500).json({ error: 'Internal Server Error', success: false });
     }
 };
 
@@ -53,57 +45,58 @@ export const login = async (req, res) => {
     if (!email || !password) {
         return res.status(400).json({ error: 'Email and password are required', success: false });
     }
+
     try {
         const user = await userModel.findOne({ email });
         if (!user) {
             return res.status(401).json({ error: 'Invalid email or password', success: false });
         }
+
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(401).json({ error: 'Invalid password', success: false });
         }
+
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-        res.cookie('token', token,
-            {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-            });
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
         res.status(200).json({ message: 'Login successful', success: true });
-    }
-    catch (error) {
+    } catch (error) {
         res.status(500).json({ error: 'Internal Server Error', success: false });
     }
-}
+};
 
 export const logout = (req, res) => {
     try {
-        res.clearCookie('token',
-            {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-            });
+        res.clearCookie('token', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+        });
         return res.status(200).json({ message: 'Logout successful', success: true });
     } catch (error) {
         return res.status(500).json({ error: 'Internal Server Error', success: false });
     }
-
-}
+};
 
 export const sendVerifyOtp = async (req, res) => {
     try {
-        const user = await userModel.findById(req.userId); 
+        const user = await userModel.findById(req.userId);
         if (!user) {
             return res.status(404).json({ error: 'User not found', success: false });
         }
         if (user.isVerified) {
             return res.status(400).json({ error: 'User already verified', success: false });
         }
+
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         user.verifyOtp = otp;
-        user.verifyOtpExpiresAt = Date.now() + 30 * 60 * 1000;
+        user.verifyOtpExpiresAt = Date.now() + 30 * 60 * 1000; // 30 mins
         await user.save();
 
         await transporter.sendMail({
@@ -121,11 +114,9 @@ export const sendVerifyOtp = async (req, res) => {
 
 export const verifyEmail = async (req, res) => {
     try {
-        const { userId, otp } = req.body;
-        if (!userId || !otp) {
-            return res.status(400).json({ error: 'User ID and OTP are required', success: false });
-        }
-        const user = await userModel.findById(userId);
+        const { otp } = req.body;
+        const user = await userModel.findById(req.userId);
+
         if (!user) {
             return res.status(404).json({ error: 'User not found', success: false });
         }
@@ -135,24 +126,31 @@ export const verifyEmail = async (req, res) => {
         if (user.verifyOtpExpiresAt < Date.now()) {
             return res.status(400).json({ error: 'OTP has expired', success: false });
         }
+
         user.isVerified = true;
         user.verifyOtp = '';
         user.verifyOtpExpiresAt = 0;
         await user.save();
+
         res.status(200).json({ message: 'Account verified successfully', success: true });
     } catch (error) {
         res.status(500).json({ error: 'Internal Server Error', success: false });
     }
 };
 
-export const isAuthenticated = (req, res) => {
+export const isAuthenticated = async (req, res) => {
     try {
         if (!req.userId) {
             return res.status(401).json({ error: 'Unauthorized: Login Again', success: false });
         }
-        res.status(200).json({ message: 'User is authenticated', success: true });
+
+        const user = await userModel.findById(req.userId).select('-password');
+        if (!user) {
+            return res.status(404).json({ error: 'User not found', success: false });
+        }
+
+        res.status(200).json({ message: 'User is authenticated', success: true, user });
     } catch (error) {
-        console.error("isAuthenticated error:", error);
         res.status(500).json({ error: 'Internal Server Error', success: false });
     }
 };
@@ -162,23 +160,25 @@ export const sendResetOtp = async (req, res) => {
     if (!email) {
         return res.status(400).json({ error: 'Email is required', success: false });
     }
+
     try {
         const user = await userModel.findOne({ email });
         if (!user) {
             return res.status(404).json({ error: 'User not found', success: false });
         }
+
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         user.resetOtp = otp;
-        user.resetOtpExpiresAt = Date.now() + 30 * 60 * 1000; // 30 minutes from now
+        user.resetOtpExpiresAt = Date.now() + 30 * 60 * 1000;
         await user.save();
-        // sending otp email
-        const mailOptions = {
+
+        await transporter.sendMail({
             from: process.env.SENDER_EMAIL,
             to: user.email,
             subject: 'Password Reset OTP',
             text: `Hello ${user.name},\n\nYour password reset OTP code is ${otp}. It is valid for 30 minutes.\n\nBest regards,\nThe Team`
-        };
-        await transporter.sendMail(mailOptions);
+        });
+
         res.status(200).json({ message: 'Password reset OTP sent to email', success: true });
     } catch (error) {
         res.status(500).json({ error: 'Internal Server Error', success: false });
@@ -190,6 +190,7 @@ export const resetPassword = async (req, res) => {
     if (!email || !otp || !newPassword) {
         return res.status(400).json({ error: 'Email, OTP and new password are required', success: false });
     }
+
     try {
         const user = await userModel.findOne({ email });
         if (!user) {
@@ -201,11 +202,13 @@ export const resetPassword = async (req, res) => {
         if (user.resetOtpExpiresAt < Date.now()) {
             return res.status(400).json({ error: 'OTP has expired', success: false });
         }
+
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         user.password = hashedPassword;
         user.resetOtp = '';
         user.resetOtpExpiresAt = 0;
         await user.save();
+
         res.status(200).json({ message: 'Password reset successfully', success: true });
     } catch (error) {
         res.status(500).json({ error: 'Internal Server Error', success: false });
