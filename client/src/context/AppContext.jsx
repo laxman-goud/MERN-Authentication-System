@@ -2,8 +2,9 @@ import axios from "axios";
 import { createContext, useState } from "react";
 import { toast } from "react-toastify";
 
-export const AppContext = createContext();
+axios.defaults.withCredentials = true;
 
+export const AppContext = createContext();
 export const AppProvider = (props) => {
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
