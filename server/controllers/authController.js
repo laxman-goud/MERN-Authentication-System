@@ -28,7 +28,7 @@ export const register = async (req, res) => {
             { 
                 httpOnly: true, 
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
                 maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
             });
 
@@ -41,7 +41,7 @@ export const register = async (req, res) => {
         };
         await transporter.sendMail(mailOptions);
 
-        res.status(201).json({ message: 'User registered successfully' });
+        res.status(201).json({ message: 'User registered successfully', success: true });
     } 
     catch (error) {
         res.status(500).json({ error: 'Internal Server Error' });
@@ -67,10 +67,10 @@ export const login = async (req, res) => {
             { 
                 httpOnly: true, 
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+                sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
                 maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
             });
-        res.status(200).json({ message: 'Login successful' });
+        res.status(200).json({ message: 'Login successful', success: true });
     }
     catch (error) {
         res.status(500).json({ error: 'Internal Server Error', success: false });
