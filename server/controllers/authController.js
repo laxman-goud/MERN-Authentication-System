@@ -145,12 +145,12 @@ export const verifyEmail= async (req, res) => {
 
 export const isAuthenticated = (req, res) => {
     try {
-        const {userId} = req.body;
-        if (!userId) {
+        if (!req.userId) {
             return res.status(401).json({ error: 'Unauthorized: Login Again', success: false });
         }
         res.status(200).json({ message: 'User is authenticated', success: true });
     } catch (error) {
+        console.error("isAuthenticated error:", error);
         res.status(500).json({ error: 'Internal Server Error', success: false });
     }
 };
