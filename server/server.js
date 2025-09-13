@@ -10,12 +10,26 @@ import userRouter from './routes/userRoutes.js';
 const app = express();
 const PORT = process.env.PORT || 3000;
 connectDB();
-const allowedOrigins = ['http://localhost:5173'];
+
+const allowedOrigins = [
+    "http://localhost:5173",
+    "https://mern-authentication-system-psi.vercel.app"
+];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error("Not allowed by CORS"));
+        }
+    },
+    credentials: true
+}));
+
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors({ origin: allowedOrigins, credentials: true }));
-
 
 app.get('/', (req, res) => {
     res.send('Hello World!');
