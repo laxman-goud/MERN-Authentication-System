@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import userModel from '../models/User.js';
 import transporter from '../config/nodemailer.js';
+import { EMAIL_VERIFY_TEMPLATE, PASSWORD_RESET_TEMPLATE} from '../config/emailTemplates.js'
 
 export const register = async (req, res) => {
     const { name, email, password } = req.body;
@@ -103,7 +104,8 @@ export const sendVerifyOtp = async (req, res) => {
             from: process.env.SENDER_EMAIL,
             to: user.email,
             subject: 'Account Verification OTP',
-            text: `Hello ${user.name},\n\nYour OTP code is ${otp}. It is valid for 30 minutes.\n\nBest regards,\nThe Team`
+            // text: `Hello ${user.name},\n\nYour OTP code is ${otp}. It is valid for 30 minutes.\n\nBest regards,\nThe Team`,
+            html: EMAIL_VERIFY_TEMPLATE.replace("{{otp}}", otp).replace("{{email}}", user.email)
         });
 
         res.status(200).json({ message: 'OTP sent to email', success: true });
@@ -176,7 +178,8 @@ export const sendResetOtp = async (req, res) => {
             from: process.env.SENDER_EMAIL,
             to: user.email,
             subject: 'Password Reset OTP',
-            text: `Hello ${user.name},\n\nYour password reset OTP code is ${otp}. It is valid for 30 minutes.\n\nBest regards,\nThe Team`
+            // text: `Hello ${user.name},\n\nYour password reset OTP code is ${otp}. It is valid for 30 minutes.\n\nBest regards,\nThe Team`,
+            html: PASSWORD_RESET_TEMPLATE.replace("{{otp}}", otp).replace("{{email}}", user.email)
         });
 
         res.status(200).json({ message: 'Password reset OTP sent to email', success: true });
