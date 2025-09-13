@@ -13,24 +13,30 @@ export const AppProvider = (props) => {
 
     const getAuthState = async () => {
         try {
-            const {data} = await axios.get(backendUrl + '/api/auth/is-auth', {withCredentials: true});
-            if(data.success){
+            const { data } = await axios.get(backendUrl + '/api/auth/is-auth', { withCredentials: true });
+            if (data.success) {
                 setIsLoggedin(true);
                 getUserData();
             }
         } catch (error) {
-            toast.error(error.message);         
+            if (error.response && error.response.status === 401) {
+                setIsLoggedin(false);
+                setUserData(false);
+            } else {
+                toast.error("Error checking auth state");
+            }
         }
-    } 
-
+    };
     const getUserData = async () => {
         try {
-            const {data} = await axios.get(backendUrl + '/api/user/data', { withCredentials: true });
+            const { data } = await axios.get(backendUrl + '/api/user/data', { withCredentials: true });
             data.success ? setUserData(data.userData) : toast.error(data.message);
         } catch (error) {
-            toast.error(error.message);
+            if (!(error.response && error.response.status === 401)) {
+                toast.error("Failed to load user data");
+            }
         }
-    }
+    };
 
     useEffect(() => {
         getAuthState();
