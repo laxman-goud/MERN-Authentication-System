@@ -5,7 +5,9 @@ import Header from '../components/Header'
 const Home = () => {
     return (
         <div>
+            {/* Navigation bar */}
             <NavBar />
+            {/* Hero section */}
             <Header />
         </div>
     )

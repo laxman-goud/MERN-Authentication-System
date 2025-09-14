@@ -7,21 +7,26 @@ import { toast } from 'react-toastify';
 
 const EmailVerify = () => {
 
-    axios.defaults.withCredentials = true;
+    axios.defaults.withCredentials = true; // send cookies with requests
     const navigate = useNavigate();
-    const inputRefs = useRef([]);
+    const inputRefs = useRef([]); // refs for OTP input boxes
     const { backendUrl, isLoggedin, userData, getUserData } = useContext(AppContext);
 
+    // Move focus to next input on typing
     const handleInput = (e, index) => {
         if (e.target.value.length > 0 && index < inputRefs.current.length - 1) {
             inputRefs.current[index + 1].focus();
         }
     }
+
+    // Move focus back on Backspace
     const handleKeyDown = (e, index) => {
         if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
             inputRefs.current[index - 1].focus();
         }
     }
+
+    // Handle OTP paste (fill all inputs at once)
     const handlePaste = (e) => {
         const paste = e.clipboardData.getData('text');
         const pasteArray = paste.split('');
@@ -32,6 +37,7 @@ const EmailVerify = () => {
         })
     }
 
+    // Submit OTP for verification
     const onSubmitHandler = async (e) => {
         try {
             e.preventDefault();
@@ -40,7 +46,7 @@ const EmailVerify = () => {
             const { data } = await axios.post(backendUrl + '/api/auth/verify-account', { otp });
             if (data.success) {
                 toast.success(data.message);
-                getUserData();
+                getUserData(); // refresh user info
                 navigate('/');
             }
             else {
@@ -51,10 +57,10 @@ const EmailVerify = () => {
         }
     }
 
+    // Redirect if already verified
     useEffect(() => {
         isLoggedin && userData && userData.isVerified && navigate('/')
     }, [isLoggedin, userData])
-
 
     return (
         <div className='flex items-center justify-center min-h-screen px-6 sm:px-4 bg-gradient-to-br from-blue-200 to-purple-400'>
