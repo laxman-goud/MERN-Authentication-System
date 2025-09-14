@@ -6,6 +6,7 @@ import { AppProvider } from './context/AppContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <BrowserRouter>
+    {/* Wrap app with context provider */}
     <AppProvider>
       <App />
     </AppProvider>
