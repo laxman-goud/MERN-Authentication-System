@@ -57,14 +57,14 @@ export const register = async (req, res) => {
 // -----------------------
 export const login = async (req, res) => {
     const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Email and password are required', success: false });
+    if (!email || !password) return res.status(200).json({ error: 'Email and password are required', success: false });
 
     try {
         const user = await userModel.findOne({ email });
-        if (!user) return res.status(401).json({ error: 'Invalid email or password', success: false });
+        if (!user) return res.status(200).json({ error: 'Invalid email or password', success: false });
 
         const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(401).json({ error: 'Invalid password', success: false });
+        if (!isMatch) return res.status(200).json({ error: 'Invalid password', success: false });
 
         // issue token
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
